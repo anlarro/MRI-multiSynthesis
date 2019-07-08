@@ -1,17 +1,14 @@
 import math
 import numpy as np
 
-import os
-import SimpleITK as sitk
-
 from model import Multimodel
 from my_loader import Data
 
 from keras.callbacks import EarlyStopping
 
-input_modalities = ['PD']
-output_modalities = ['T2']
-folder = '/mnt/D8D413E4D413C422/I3M/Imagenes/IXI/IXI-reduced'
+input_modalities = ['T1','T2']
+output_modalities = ['PD']
+folder = '/mnt/D8D413E4D413C422/I3M/Imagenes/IXI/data-reduced'
 
 data = Data(folder, input_modalities + output_modalities)
 data.load()
