@@ -6,9 +6,9 @@ from my_loader import Data
 
 from keras.callbacks import EarlyStopping
 
-input_modalities = ['T1','T2']
-output_modalities = ['PD']
-folder = '/mnt/D8D413E4D413C422/I3M/Imagenes/IXI/data-reduced'
+input_modalities = ['T1','T2','T2-FLAIR']
+output_modalities = ['T1','T2','T2-FLAIR']
+folder = '/mnt/D8D413E4D413C422/I3M/Imagenes/Oasis/data-reduced'
 
 data = Data(folder, input_modalities + output_modalities)
 data.load()
@@ -43,5 +43,5 @@ if len(input_modalities) > 1:
 es = EarlyStopping(monitor='val_loss', min_delta=0.01, mode='min', patience=10)
 
 print('Fitting model...')
-m.model.fit(train_in, train_out, validation_data=(valid_in, valid_out), nb_epoch=1, batch_size=32,callbacks=[es])
+m.model.fit(train_in, train_out, validation_data=(valid_in, valid_out), nb_epoch=1, batch_size=8,callbacks=[es])
 m.model.save_weights('my_weights.h5')

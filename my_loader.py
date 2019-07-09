@@ -21,8 +21,8 @@ class Data(object):
             print('Loading ' + mod_name)
             folder=os.path.join(self.folder,mod_name)
             X_sitk = [sitk.ReadImage(os.path.join(folder, f)) for f in sorted(os.listdir(folder)) if '_reg' in f] #We load only the co-registered vols identified with _reg
-            target_size = int(4 * (np.ceil(X_sitk[0].GetSize()[0]+4) / 4)) #make target 2D size to be divisible by 8
-            X_sitk_padded = [self.padVolume(X,[target_size,target_size]) for X in X_sitk]
+            target_size = [int(4 * np.ceil((X_sitk[0].GetSize()[i]+4) / 4)) for i in range(2)] #make target 2D size to be divisible by 8
+            X_sitk_padded = [self.padVolume(X,target_size) for X in X_sitk]
             X = [sitk.GetArrayFromImage(vol_sitk) for vol_sitk in X_sitk_padded]
             print('Loaded %d vols' % len(X))
             X = [X[i].astype('float32') for i in range(len(X))]

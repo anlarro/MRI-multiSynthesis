@@ -6,9 +6,9 @@ from my_loader import Data
 import SimpleITK as sitk
 import numpy as np
 
-input_modalities = ['T1','T2']
-output_modalities = ['PD']
-folder = '/mnt/D8D413E4D413C422/I3M/Imagenes/IXI/data-reduced'
+input_modalities = ['T1','T2','T2-FLAIR']
+output_modalities = ['T1','T2','T2-FLAIR']
+folder = '/mnt/D8D413E4D413C422/I3M/Imagenes/Oasis/data-reduced'
 
 data = Data(folder, input_modalities + output_modalities)
 data.load()
@@ -38,14 +38,19 @@ for vol_num in ids_test:
     X = [data.get(mod, [vol_num]) for mod in input_modalities]
     Z = m.model.predict(X)
     # there's 1 output per embedding plus 1 output for the total variance embedding (that's why we iterate as follows)
-    for i in range(np.shape(Z)[0]):
-        padded_size = np.squeeze(Z[i]).shape
-        no_padded_size = data.vols_sitk[input_modalities[0]][vol_num].GetSize()
-        Z_sitk = sitk.GetImageFromArray(np.squeeze(Z[i])[:,
-                                        int(np.floor((padded_size[2]-no_padded_size[1])/2)):
-                                        no_padded_size[1]+int(np.floor((padded_size[2]-no_padded_size[1])/2)),
-                                        int(np.floor((padded_size[1] - no_padded_size[0]) / 2)):
-                                        no_padded_size[0] + int(np.floor((padded_size[1] - no_padded_size[0]) / 2))
-                                        ])
-        Z_sitk.CopyInformation(data.vols_sitk[input_modalities[0]][vol_num])
-        sitk.WriteImage(Z_sitk, os.path.join(output_folder,data.patient_names[vol_num]+'_'+str(i)+'.nii.gz'))
+    j=0
+    inputs=input_modalities+['ALL']
+    for o in range(len(output_modalities)):
+        for i in range(len(inputs)):
+            padded_size = np.squeeze(Z[j]).shape
+            no_padded_size = data.vols_sitk[input_modalities[0]][vol_num].GetSize()[::-1]
+            Z_sitk = sitk.GetImageFromArray(np.squeeze(Z[j])[:,
+                                            int(np.floor((padded_size[1]-no_padded_size[1])/2)):
+                                            no_padded_size[1]+int(np.floor((padded_size[1]-no_padded_size[1])/2)),
+                                            int(np.floor((padded_size[2] - no_padded_size[2]) / 2)):
+                                            no_padded_size[2] + int(np.floor((padded_size[2] - no_padded_size[2]) / 2))
+                                            ])
+            Z_sitk.CopyInformation(data.vols_sitk[input_modalities[0]][vol_num])
+            sitk.WriteImage(Z_sitk, os.path.join(output_folder,data.patient_names[vol_num]+
+                                                 '_in_'+inputs[i]+'_out_'+output_modalities[o]+'.nii.gz'))
+            j += 1
