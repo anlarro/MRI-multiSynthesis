@@ -32,7 +32,7 @@ class Multimodel(object):
     m.build()
     '''
     def __init__(self, input_modalities, output_modalities, output_weights, latent_dim, channels, spatial_transformer,
-                 common_merge, ind_outs, fuse_outs):
+                 common_merge, ind_outs, fuse_outs,vol_shape):
         self.input_modalities = input_modalities
         self.output_modalities = output_modalities
         self.latent_dim = latent_dim
@@ -45,7 +45,7 @@ class Multimodel(object):
         self.num_emb = len(input_modalities) + 1
 
         if spatial_transformer:
-            self.H, self.W = 112, 80  # Width/Height for ISLES2015 dataset
+            self.H, self.W = vol_shape  # Width/Height of dataset
         else:
             self.H, self.W = None, None
 

@@ -28,8 +28,9 @@ class Data(object):
             X = [X[i].astype('float32') for i in range(len(X))]
             self.vols[mod_name] = X
             self.vols_sitk[mod_name] = X_sitk   #we keep the original sitk volume without padding
+        self.vol_shape = target_size[::-1]
         self.num_vols = len(X)
-        self.patient_names = [f.split('-')[0] for f in sorted(os.listdir(folder)) if '_reg' in f]
+        self.patient_names = [f.split('_')[0] for f in sorted(os.listdir(folder)) if '_reg' in f]
 
     def padVolume(self,volume, size, default_pixel_value=0):
         shape = volume.GetSize()
