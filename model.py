@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib
+import itertools
 
 # matplotlib.use('Agg')
 import sys
@@ -154,7 +155,7 @@ class Multimodel(object):
         all_emb = ind_emb + [combined_emb]
         return all_emb
 
-    def build(self):
+    def build(self, test=False):
         print('Latent dimensions: ' + str(self.latent_dim))
 
         encoders = [self.encoder_maker(m) for m in self.input_modalities]
@@ -163,18 +164,43 @@ class Multimodel(object):
         self.org_ind_emb = [lr for (input, lr) in encoders]
         self.inputs = [input for (input, lr) in encoders]
 
-        # apply spatial transformer
-        if self.spatial_transformer:
-            print('Adding a spatial transformer layer')
-            input_shape = (self.latent_dim, self.H, self.W)
-            tpn = tpn_maker(input_shape)
-            mod1 = ind_emb[0]
-            aligned_ind_emb = [mod1]
-            for mod in ind_emb[1:]:
-                aligned_mod = merge([tpn([mod1, mod]), mod], mode=STMerge, output_shape=input_shape)
-                aligned_ind_emb.append(aligned_mod)
-            ind_emb = aligned_ind_emb
+        # apply spatial transformer/mine-
+        # if self.spatial_transformer:
+        #     print('Adding a spatial transformer layer')
+        #     input_shape = (self.latent_dim, self.H, self.W)
+        #     tpn = tpn_maker(input_shape)
+        #     aligned_ind_emb = ind_emb
+        #     comb = list(itertools.combinations(range(len(ind_emb)), 2))
+        #
+        #     for mod in comb:
+        #         aligned_mod = merge([tpn([ind_emb[mod[0]], ind_emb[mod[1]]]), ind_emb[mod[1]]], mode=STMerge,
+        #                             output_shape=input_shape)
+        #         aligned_ind_emb.append(aligned_mod)
+        #     ind_emb = aligned_ind_emb
 
+        if self.spatial_transformer:
+            if test: # apply spatial transformer/github multimodal_brain_synthesis issue #3 solution
+                print('Adding a spatial transformer layer')
+                input_shape = (self.latent_dim, self.H, self.W)
+                tpn = tpn_maker(input_shape)
+                aligned_ind_emb = ind_emb
+                for mod in range(len(ind_emb) - 1):
+                    aligned_mod = merge([tpn([ind_emb[mod], ind_emb[mod + 1]]), ind_emb[mod + 1]], mode=STMerge,
+                                        output_shape=input_shape)
+                    aligned_ind_emb.append(aligned_mod)
+                ind_emb = aligned_ind_emb
+            else: #build for training
+                print('Adding a spatial transformer layer') # apply spatial transformer/original
+                input_shape = (self.latent_dim, self.H, self.W)
+                tpn = tpn_maker(input_shape)
+                mod1 = ind_emb[0]
+                aligned_ind_emb = [mod1]
+                for mod in ind_emb[1:]:
+                    aligned_mod = merge([tpn([mod1, mod]), mod], mode=STMerge, output_shape=input_shape)
+                    aligned_ind_emb.append(aligned_mod)
+                ind_emb = aligned_ind_emb
+
+####################
         if self.common_merge == 'hemis':
             self.all_emb = self.hemis(ind_emb)
         else:
@@ -216,7 +242,8 @@ class Multimodel(object):
         print('loss weights: ', loss_weights)
 
         self.model = Model(input=self.inputs, output=outputs)
-        self.model.compile(optimizer=Adam(lr=0.0001), loss=out_dict, loss_weights=loss_weights)
+        if not test:
+            self.model.compile(optimizer=Adam(lr=0.0001), loss=out_dict, loss_weights=loss_weights)
 
     def get_inputs(self, modalities):
         return [self.inputs[self.input_modalities.index(mod)] for mod in modalities]
@@ -295,7 +322,8 @@ class Multimodel(object):
 
         decoder = self.decoders[self.output_modalities.index(output_modality)]
         outputs = get_decoder_outputs([output_modality], [decoder], embeddings)
-        outputs += self.get_embedding_distance_outputs(embeddings)
+        if len(input_modalities)>1:
+            outputs += self.get_embedding_distance_outputs(embeddings)
 
         model = Model(input=inputs, output=outputs)
         return model
@@ -378,8 +406,6 @@ def tpn_maker(input_shape):
     b[1, 1] = 1
     W = np.zeros((50, 6), dtype='float32')
     weights = [W, b.flatten()]
-
-    # input_shape = (1, 112, 80)
 
     target_input = Input(shape=input_shape)
     input = Input(shape=input_shape)

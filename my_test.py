@@ -9,6 +9,8 @@ import numpy as np
 
 folder = '/mnt/D8D413E4D413C422/I3M/Imagenes/Oasis/data-reduced'
 
+#The model was trained with all possible inputs and outputs, so we have one sigle model.
+# At testing time the required output is not inclued as input. For example: output: T2-FLAIR - inputs: T1-T2
 training_inputs = ['T1','T2','T2-FLAIR']
 training_outputs = ['T1','T2','T2-FLAIR']
 
@@ -19,10 +21,9 @@ data.load()
 weights = {m:1.0 for m in training_outputs}
 weights['concat']=1.0
 m = Multimodel(training_inputs, training_outputs, weights, 16, 1, True, 'max', True, True, data.vol_shape)
-m.build()
+m.build(test=True)
 #load weights
 m.model.load_weights('my_weights.h5')
-
 
 output_folder = os.path.join(folder,'outputs')
 
@@ -49,9 +50,9 @@ for vol_num in ids_test:
     for i in range(len(inputs)):
         input_modalities = list(inputs[i])
         output_modalities = list(outputs[i])
-        for o in range(len(output_modalities)):
+        for o in output_modalities:
             X = [data.get(mod, [vol_num]) for mod in input_modalities]
-            partial_model = m.get_partial_model(input_modalities, output_modalities[o])
+            partial_model = m.get_partial_model(input_modalities, o)
             Z = partial_model.predict(X)
                 # there's 1 output per embedding plus 1 output for the total variance embedding (that's why we iterate as follows)
 
@@ -68,5 +69,5 @@ for vol_num in ids_test:
                                             ])
             Z_sitk.CopyInformation(data.vols_sitk[input_modalities[0]][vol_num])
             sitk.WriteImage(Z_sitk, os.path.join(output_folder, data.patient_names[vol_num] +
-                                                '_in_' + "--".join(input_modalities) + '_out_' + output_modalities[o] + '.nii.gz'))
+                                                '_in_' + "--".join(input_modalities) + '_out_' + o + '.nii.gz'))
 

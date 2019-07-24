@@ -19,6 +19,7 @@ weights['concat']=1.0
 m = Multimodel(input_modalities, output_modalities, weights, 16, 1, True, 'max', True, True, data.vol_shape)
 m.build()
 
+
 #Prepare data
 trainFrac = math.floor(data.num_vols*0.7)
 valFrac = math.floor(data.num_vols*0.1)
@@ -43,5 +44,5 @@ if len(input_modalities) > 1:
 es = EarlyStopping(monitor='val_loss', min_delta=0.01, mode='min', patience=10)
 
 print('Fitting model...')
-m.model.fit(train_in, train_out, validation_data=(valid_in, valid_out), nb_epoch=100, batch_size=8,callbacks=[es])
+m.model.fit(train_in, train_out, validation_data=(valid_in, valid_out), nb_epoch=1, batch_size=8,callbacks=[es])
 m.model.save_weights('my_weights.h5')
