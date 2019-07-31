@@ -1,5 +1,6 @@
 import math
 import numpy as np
+import matplotlib.pyplot as plt
 
 from model import Multimodel
 from my_loader import Data
@@ -8,9 +9,12 @@ from keras.callbacks import EarlyStopping
 
 input_modalities = ['T1','T2','T2-FLAIR']
 output_modalities = ['T1','T2','T2-FLAIR']
-folder = '/mnt/D8D413E4D413C422/I3M/Imagenes/Oasis/data-reduced'
+folder = '/mnt/D8D413E4D413C422/I3M/Imagenes/Oasis/data-tiny'
 
-data = Data(folder, input_modalities + output_modalities)
+if input_modalities == output_modalities:
+    data = Data(folder, input_modalities)
+else:
+    data = Data(folder, input_modalities + output_modalities)
 data.load()
 
 #build model
@@ -18,7 +22,6 @@ weights = {m:1.0 for m in output_modalities}
 weights['concat']=1.0
 m = Multimodel(input_modalities, output_modalities, weights, 16, 1, True, 'max', True, True, data.vol_shape)
 m.build()
-
 
 #Prepare data
 trainFrac = math.floor(data.num_vols*0.7)
@@ -43,6 +46,39 @@ if len(input_modalities) > 1:
 #train
 es = EarlyStopping(monitor='val_loss', min_delta=0.01, mode='min', patience=10)
 
-print('Fitting model...')
-m.model.fit(train_in, train_out, validation_data=(valid_in, valid_out), nb_epoch=1, batch_size=8,callbacks=[es])
+# print('Fitting model...')
+# m.model.fit(train_in, train_out, validation_data=(valid_in, valid_out), nb_epoch=1, batch_size=16,callbacks=[es])
+# m.model.save_weights('my_weights.h5')
+
+#Train by loading batches
+NUM_EPOCHS = 1
+BATCH_SIZE = 16
+
+# initialize both the training and testing image generators
+trainGen = data.generate_batches(input_modalities, BATCH_SIZE, mode = 'train')
+valGen = data.generate_batches(output_modalities, BATCH_SIZE, mode = 'valid')
+
+# train the network
+print("Fitting model with generator...")
+H = m.model.fit_generator(
+	trainGen,
+	steps_per_epoch=NUM_TRAIN_IMAGES // BATCH_SIZE,
+	validation_data=valGen,
+	validation_steps=NUM_VAL_IMAGES // BATCH_SIZE,
+	epochs=NUM_EPOCHS,
+    callbacks = [es])
 m.model.save_weights('my_weights.h5')
+
+# plot the training loss and accuracy
+N = NUM_EPOCHS
+plt.style.use("ggplot")
+plt.figure()
+plt.plot(np.arange(0, N), H.history["loss"], label="train_loss")
+plt.plot(np.arange(0, N), H.history["val_loss"], label="val_loss")
+plt.plot(np.arange(0, N), H.history["acc"], label="train_acc")
+plt.plot(np.arange(0, N), H.history["val_acc"], label="val_acc")
+plt.title("Training Loss and Accuracy on Dataset")
+plt.xlabel("Epoch #")
+plt.ylabel("Loss/Accuracy")
+plt.legend(loc="upper right")
+plt.savefig("training_plot.png")

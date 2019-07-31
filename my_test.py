@@ -14,7 +14,10 @@ folder = '/mnt/D8D413E4D413C422/I3M/Imagenes/Oasis/data-reduced'
 training_inputs = ['T1','T2','T2-FLAIR']
 training_outputs = ['T1','T2','T2-FLAIR']
 
-data = Data(folder, training_inputs)
+if training_inputs == training_outputs:
+    data = Data(folder, training_inputs)
+else:
+    data = Data(folder, training_inputs + training_outputs)
 data.load()
 
 #build model
@@ -68,6 +71,6 @@ for vol_num in ids_test:
                                             np.floor((padded_size[2] - no_padded_size[2]) / 2))
                                             ])
             Z_sitk.CopyInformation(data.vols_sitk[input_modalities[0]][vol_num])
-            sitk.WriteImage(Z_sitk, os.path.join(output_folder, data.patient_names[vol_num] +
+            sitk.WriteImage(Z_sitk, os.path.join(output_folder, data.test_names[vol_num] +
                                                 '_in_' + "--".join(input_modalities) + '_out_' + o + '.nii.gz'))
 
