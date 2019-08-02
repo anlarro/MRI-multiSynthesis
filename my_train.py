@@ -55,8 +55,11 @@ NUM_EPOCHS = 1
 BATCH_SIZE = 16
 
 # initialize both the training and testing image generators
-trainGen = data.generate_batches(input_modalities, BATCH_SIZE, mode = 'train')
-valGen = data.generate_batches(output_modalities, BATCH_SIZE, mode = 'valid')
+trainGen_in = data.generate_batches(input_modalities, BATCH_SIZE, mode = 'train')
+trainGen_out = data.generate_batches(output_modalities, BATCH_SIZE, mode = 'train')
+
+valGen_in = data.generate_batches(input_modalities, BATCH_SIZE, mode = 'valid')
+valGen_out = data.generate_batches(output_modalities, BATCH_SIZE, mode = 'valid')
 
 # train the network
 print("Fitting model with generator...")
