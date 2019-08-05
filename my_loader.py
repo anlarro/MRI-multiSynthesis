@@ -20,7 +20,7 @@ class Data(object):
             train_files = [f for f in sorted(os.listdir(folder_mod)) if '_reg' in f]
             self.total_vols = len(train_files)
 
-    def generate_batches(self, modalities, batch_size = 16, mode='train'):
+    def generate_batches(self, modalities, num_emb = None, batch_size = 16, mode='train'):
         #yields batches of data, to use with fit_generator
         folder=self.folders[mode]
         vol_num = 0
@@ -30,11 +30,15 @@ class Data(object):
         while True: #loop indefinitely (generator)
 
             if X[0].shape[0] <= last_vol[0].shape[0]:
-                X = np.vstack(X,readVolume(folder, vol_num, modalities)) #read the next volume, we always keep >1 volume_size in X
-                last_vol = X
+                X2 = readVolume(folder, vol_num, modalities)
+                X = [np.vstack((X[i],X2[i])) for i in range(len(X))] #read the next volume, we always keep >1 volume_size in X
+                last_vol = X2
                 vol_num += 1
                 if vol_num == self.total_vols and mode != 'test': # we keep feeding the generator from the fist volume
                     vol_num = 0
+                    X = readVolume(folder, vol_num, modalities)
+                    last_vol = X
+                    vol_num += 1
 
             # we always pop() batch_size from the beginning of X
             if X[0].shape[0] >= batch_size:
@@ -44,22 +48,19 @@ class Data(object):
                 batch = X
                 X = []
 
-            ####################
-            data_ids_ar = np.concatenate(data_ids)
-            if len(data_ids_ar.shape) < 4:
-                data_ids_ar = np.expand_dims(data_ids_ar, axis=1)
+            if len(batch[0].shape) < 4:
+                batch = [np.expand_dims(batch[i], axis=1) for i in range(len(batch))]
 
-            train_in = [data.get(mod, ids_train) for mod in input_modalities]
-
-            # there's 1 output per embedding plus 1 output for the total variance embedding
-            train_out = [data.get(mod, ids_train) for mod in output_modalities for i in range(m.num_emb)]
-
-            train_shape = (train_out[0].shape[0], 1, train_out[0].shape[2], train_out[0].shape[3])
-
-            if len(input_modalities) > 1:
-                train_out += [np.zeros(shape=train_shape) for i in range(2)]
-####################
-                yield(batch)
+            if num_emb is not None:
+                # there's 1 output per embedding plus 1 output for the total variance embedding
+                batch = [batch[m] for m in range(len(batch)) for i in range(num_emb)]
+#
+#             train_shape = (train_out[0].shape[0], 1, train_out[0].shape[2], train_out[0].shape[3])
+#
+#             if len(input_modalities) > 1:
+#                 train_out += [np.zeros(shape=train_shape) for i in range(2)]
+# ####################
+            yield(batch)
 
     def readVolume(self, folder, vol_num, modalities):
         array_volume = []
