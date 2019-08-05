@@ -44,7 +44,6 @@ class Data(object):
                 batch = X
                 X = []
 
-
             ####################
             data_ids_ar = np.concatenate(data_ids)
             if len(data_ids_ar.shape) < 4:
