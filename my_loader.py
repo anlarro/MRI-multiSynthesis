@@ -10,6 +10,7 @@ class Data(object):
         self.folders['train'] = train_folder
         self.folders['valid'] = valid_folder
         self.folders['test'] = test_folder
+        self.max_size = (0, 0)
 
         if test_folder is not None:
             folder_mod = os.path.join(test_folder, os.listdir(test_folder)[0]);
@@ -75,11 +76,8 @@ class Data(object):
             files = [f for f in sorted(os.listdir(folder_mod)) if '_reg' in f]  # We load only the co-registered vols identified with _reg
             f = files[vol_num]
             volume = sitk.ReadImage(os.path.join(folder_mod, f))
-            target_size = [int(64 * np.ceil((volume.GetSize()[i] + 64) / 64)) for i in range(2)]  # make target 2D size to be divisible by 40, to ensure that all slices are of the same size
-            volume_padded = self.padVolume(volume,
-                                           target_size)  # With padding we ensure that all slices across volumes are the same
+            volume_padded = self.padVolume(volume, self.target_size)  # With padding we ensure that all slices across volumes are the same
             array_volume.append(sitk.GetArrayFromImage(volume_padded).astype('float32'))
-        self.vol_shape = target_size[::-1]
         return array_volume
 
     def padVolume(self,volume, size, default_pixel_value=0):
@@ -91,13 +89,19 @@ class Data(object):
                                   default_pixel_value)
         return padded
 
-    def countImages(self, input_modalities, mode = 'train'):    #loads all volumes, to use with model.fit()
+    def countImages(self, input_modalities, mode = 'train'):  #loads all volumes, to use with model.fit()
         mod_name = input_modalities[0]
         folder = self.folders[mode]
         folder_mod = os.path.join(folder, mod_name)
         files = [f for f in sorted(os.listdir(folder_mod)) if '_reg' in f]
         num_images = 0
+        num_vols = 0
         for f in files:
             volume = sitk.ReadImage(os.path.join(folder_mod, f))
             num_images+=volume.GetSize()[2]
-        return num_images
+            num_vols+=1
+            if volume.GetSize()[:2] > self.max_size:
+                self.max_size = volume.GetSize()[:2]
+            self.target_size = [int(4 * np.ceil((self.max_size[i] + 4) / 4)) for i in range(2)]
+            self.vol_shape = self.target_size[::-1]
+        return num_images, num_vols
