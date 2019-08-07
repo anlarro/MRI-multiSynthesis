@@ -11,8 +11,8 @@ output_modalities = ['T1','T2','T2-FLAIR']
 folder = '/mnt/D8D413E4D413C422/I3M/Imagenes/Oasis/data-reduced'
 data = Data(train_folder = folder+'/Training', valid_folder = folder+'/Validation')
 print("Counting total number of images...")
-num_train_images, _ = data.countImages(input_modalities, mode = 'train')
-num_val_images, _ = data.countImages(input_modalities, mode = 'valid')
+num_train_images = data.countImages(input_modalities, mode = 'train')
+num_val_images = data.countImages(input_modalities, mode = 'valid')
 
 #build model
 weights = {m:1.0 for m in output_modalities}
@@ -36,9 +36,9 @@ valGen = data.generate_batches(input_modalities, output_modalities, m.num_emb, b
 print("Fitting model with generator...")
 H = m.model.fit_generator(
 	trainGen,
-	samples_per_epoch=num_train_images,
+	samples_per_epoch=BATCH_SIZE*(num_train_images//BATCH_SIZE),
 	validation_data=valGen,
-	nb_val_samples=num_val_images,
+	nb_val_samples=BATCH_SIZE*(num_val_images//BATCH_SIZE),
 	nb_epoch=NUM_EPOCHS,
     callbacks = [es],
     verbose = 2)

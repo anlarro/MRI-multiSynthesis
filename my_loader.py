@@ -10,17 +10,22 @@ class Data(object):
         self.folders['train'] = train_folder
         self.folders['valid'] = valid_folder
         self.folders['test'] = test_folder
+
         self.max_size = (0, 0)
 
+        self.total_vols={}
         if test_folder is not None:
             folder_mod = os.path.join(test_folder, os.listdir(test_folder)[0]);
             self.test_names = [f.split('_')[0] for f in sorted(os.listdir(folder_mod)) if '_reg' in f]
-            self.total_vols = len(self.test_names)
+            self.total_vols['test'] = len(self.test_names)
         else:
             folder_mod = os.path.join(train_folder, os.listdir(train_folder)[0]);
             train_files = [f for f in sorted(os.listdir(folder_mod)) if '_reg' in f]
-            self.total_vols = len(train_files)
+            self.total_vols['train'] = len(train_files)
 
+            folder_mod = os.path.join(valid_folder, os.listdir(valid_folder)[0]);
+            valid_files = [f for f in sorted(os.listdir(folder_mod)) if '_reg' in f]
+            self.total_vols['valid'] = len(valid_files)
     def generate_batches(self, input_modalities, output_modalities = None, num_emb = None, batch_size = 16, mode='train'):
         #yields batches of data, to use with fit_generator
         folder=self.folders[mode]
@@ -41,13 +46,8 @@ class Data(object):
                     Y = [np.vstack((Y[i], Y2[i])) for i in range(len(Y))]  # read the next volume, we always keep >1 volume_size in X
                 last_vol = X2
                 vol_num += 1
-                if vol_num == self.total_vols and mode != 'test': # we keep feeding the generator from the fist volume
+                if vol_num == self.total_vols[mode] and mode != 'test': # we keep feeding the generator from the fist volume
                     vol_num = 0
-                    X,_ = self.readCase(folder, vol_num, input_modalities)
-                    if output_modalities is not None:
-                        Y,_ = self.readCase(folder, vol_num, output_modalities)
-                    last_vol = X
-                    vol_num += 1
 
             # we always pop() batch_size from the beginning of X
             if X[0].shape[0] >= batch_size:
@@ -103,13 +103,11 @@ class Data(object):
         folder_mod = os.path.join(folder, mod_name)
         files = [f for f in sorted(os.listdir(folder_mod)) if '_reg' in f]
         num_images = 0
-        num_vols = 0
         for f in files:
             volume = sitk.ReadImage(os.path.join(folder_mod, f))
             num_images+=volume.GetSize()[2]
-            num_vols+=1
             if volume.GetSize()[:2] > self.max_size:
                 self.max_size = volume.GetSize()[:2]
             self.target_size = [int(4 * np.ceil((self.max_size[i] + 4) / 4)) for i in range(2)]
             self.vol_shape = self.target_size[::-1]
-        return num_images, num_vols
+        return num_images

@@ -17,8 +17,8 @@ training_outputs = ['T1','T2','T2-FLAIR']
 data = Data(train_folder = folder+'/Training',test_folder = folder+'/Testing')
 print("Counting total number of images...")
 # we need to count training images again in order to have the correct data.vol_shape
-num_train_images, _ = data.countImages(training_inputs, mode = 'train')
-num_test_images, test_vols = data.countImages(training_inputs, mode = 'test')
+num_train_images = data.countImages(training_inputs, mode = 'train')
+num_test_images = data.countImages(training_inputs, mode = 'test')
 
 #build model
 weights = {m:1.0 for m in training_outputs}
@@ -44,7 +44,7 @@ for i in inputs:
     outputs.append(tuple(set(i).symmetric_difference(training_inputs)))
 
 BATCH_SIZE = 1
-for vol_num in range(test_vols):
+for vol_num in range(data.total_vols['test']):
     print('testing model on volume ' + str(vol_num) + '...')
     _, current_sitkVol = data.readCase(data.folders['test'], vol_num, [training_inputs[0]])
     slices_per_volume = current_sitkVol.GetSize()[2]
